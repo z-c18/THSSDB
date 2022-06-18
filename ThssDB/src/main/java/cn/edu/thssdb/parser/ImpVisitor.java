@@ -5,10 +5,15 @@ package cn.edu.thssdb.parser;
 
 import cn.edu.thssdb.exception.DatabaseNotExistException;
 import cn.edu.thssdb.query.QueryResult;
+import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Database;
 import cn.edu.thssdb.schema.Manager;
+import cn.edu.thssdb.type.ColumnType;
 
 import java.util.ArrayList;
+import java.util.List;
+
+import static cn.edu.thssdb.type.ColumnType.*;
 
 /**
  * When use SQL sentence, e.g., "SELECT avg(A) FROM TableX;"
@@ -126,7 +131,84 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
      创建表格
      */
     @Override
-    public String visitCreate_table_stmt(SQLParser.Create_table_stmtContext ctx) {return null;}
+    public String visitCreate_table_stmt(SQLParser.Create_table_stmtContext ctx) {
+        try {
+            String tableName = ctx.table_name().getText().toLowerCase();
+            List<SQLParser.Column_defContext> columnDefItems = ctx.column_def();
+            Column[] columns = new Column[columnDefItems.size()];
+
+            for (int i = 0; i < columnDefItems.size(); ++i){
+                SQLParser.Column_defContext columnDefItem =  ctx.column_def(i);
+                // 获取属性名
+                String columnName = columnDefItem.column_name().getText().toLowerCase();
+
+                // 获取属性类别与最大长度
+                ColumnType columnType = null;
+                int columnMaxLength = 0;
+                String columnTypeName = columnDefItem.type_name().getText().toLowerCase();
+                switch (columnTypeName){
+                    case "int":
+                        columnType = INT;
+                        break;
+                    case "long":
+                        columnType = LONG;
+                        break;
+                    case "float":
+                        columnType = FLOAT;
+                        break;
+                    case "double":
+                        columnType = DOUBLE;
+                        break;
+                    default:
+                        if (columnTypeName.substring(0,6).equals("string")){
+                            columnType = STRING;
+                            columnMaxLength = Integer.parseInt(columnTypeName.substring(7, columnTypeName.length() - 1));
+                        }
+                        break;
+                }
+
+                // 获取属性约束，这里是每个属性自身的约束
+                int columnPrimaryKey = 0;
+                Boolean columnNotNull = false;
+                for (int j = 0; j < columnDefItem.column_constraint().size(); ++j){
+                    String columnConstraint = columnDefItem.column_constraint(j).getText().toLowerCase();
+                    switch (columnConstraint){
+                        case "notnull":
+                            columnNotNull = true;
+                            break;
+                        case "primarykey":
+                            columnPrimaryKey = 1;
+                            columnNotNull = true; // 主码必须非空
+                            break;
+                    }
+                }
+                Column column = new Column( columnName, columnType, columnPrimaryKey, columnNotNull, columnMaxLength);
+                columns[i] = column;
+            }
+
+            // 获取属性约束，这里是整个表的约束
+            System.out.println();
+            if(ctx.table_constraint() != null){
+                // 对于每条约束语句
+                for (int j = 0; j < ctx.table_constraint().column_name().size(); ++j){
+                    String columnPrimaryName = ctx.table_constraint().column_name(j).getText().toLowerCase();
+                    System.out.println(columnPrimaryName);
+
+                    // 对于每条约束语句的主键进行修改
+                    for (int i = 0; i < columnDefItems.size(); ++i){
+                        if (columns[i].getColumnName().equals(columnPrimaryName)){
+                            columns[i].setPrimary(1);
+                            columns[i].setNotNull(true);
+                        }
+                    }
+                }
+            }
+            GetCurrentDB().create(tableName, columns);
+            return "Create table " + tableName + ".";
+        } catch (Exception e) {
+            return e.getMessage();
+        }
+    }
 
     /**
      * TODO
