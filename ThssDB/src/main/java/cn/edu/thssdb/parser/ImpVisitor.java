@@ -694,12 +694,14 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                 String tableName=ctx.result_column(i).column_full_name().table_name().getText();
                 String columnName=ctx.result_column(i).column_full_name().column_name().getText();
                 columns.add(tableName+'.'+columnName);
-                if(tableName==table1Name){
+                if(tableName.equals(table1Name)){
                     whichTable.add(1);
                     index.add(table1.searchColumn(columnName));
-                }else {
+                } else if(tableName.equals(table2Name)) {
                     whichTable.add(2);
                     index.add(table2.searchColumn(columnName));
+                } else{
+                    throw new KeyNotExistException();
                 }
             }
 
@@ -709,11 +711,11 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                     for (int j = 0; j < table2Row.size(); j++) {
                         if (table1Row.get(i).getEntries().get(table1ConditionIndex).compareTo(table2Row.get(j).getEntries().get(table2ConditionIndex))==0) {
                             ArrayList<Cell>newRow=new ArrayList<>();
-                            for(int k=0;k<whichTable.size();i++){
+                            for(int k=0;k<whichTable.size();k++){
                                 if(whichTable.get(k)==1){
                                     newRow.add(table1Row.get(i).getEntries().get(index.get(k)));
                                 }else {
-                                    newRow.add(table2Row.get(i).getEntries().get(index.get(k)));
+                                    newRow.add(table2Row.get(j).getEntries().get(index.get(k)));
                                 }
                             }
                             rows.add(new Row(newRow));
@@ -725,11 +727,11 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                     for (int j = 0; j < table2Row.size(); j++) {
                         if (table1Row.get(i).getEntries().get(table1ConditionIndex).compareTo(table2Row.get(j).getEntries().get(table2ConditionIndex))!=0) {
                             ArrayList<Cell>newRow=new ArrayList<>();
-                            for(int k=0;k<whichTable.size();i++){
+                            for(int k=0;k<whichTable.size();k++){
                                 if(whichTable.get(k)==1){
                                     newRow.add(table1Row.get(i).getEntries().get(index.get(k)));
                                 }else {
-                                    newRow.add(table2Row.get(i).getEntries().get(index.get(k)));
+                                    newRow.add(table2Row.get(j).getEntries().get(index.get(k)));
                                 }
                             }
                             rows.add(new Row(newRow));
@@ -741,11 +743,11 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                     for (int j = 0; j < table2Row.size(); j++) {
                         if (table1Row.get(i).getEntries().get(table1ConditionIndex).compareTo(table2Row.get(j).getEntries().get(table2ConditionIndex))<=0) {
                             ArrayList<Cell>newRow=new ArrayList<>();
-                            for(int k=0;k<whichTable.size();i++){
+                            for(int k=0;k<whichTable.size();k++){
                                 if(whichTable.get(k)==1){
                                     newRow.add(table1Row.get(i).getEntries().get(index.get(k)));
                                 }else {
-                                    newRow.add(table2Row.get(i).getEntries().get(index.get(k)));
+                                    newRow.add(table2Row.get(j).getEntries().get(index.get(k)));
                                 }
                             }
                             rows.add(new Row(newRow));
@@ -757,11 +759,11 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                     for (int j = 0; j < table2Row.size(); j++) {
                         if (table1Row.get(i).getEntries().get(table1ConditionIndex).compareTo(table2Row.get(j).getEntries().get(table2ConditionIndex))>=0) {
                             ArrayList<Cell>newRow=new ArrayList<>();
-                            for(int k=0;k<whichTable.size();i++){
+                            for(int k=0;k<whichTable.size();k++){
                                 if(whichTable.get(k)==1){
                                     newRow.add(table1Row.get(i).getEntries().get(index.get(k)));
                                 }else {
-                                    newRow.add(table2Row.get(i).getEntries().get(index.get(k)));
+                                    newRow.add(table2Row.get(j).getEntries().get(index.get(k)));
                                 }
                             }
                             rows.add(new Row(newRow));
@@ -773,11 +775,11 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                     for (int j = 0; j < table2Row.size(); j++) {
                         if (table1Row.get(i).getEntries().get(table1ConditionIndex).compareTo(table2Row.get(j).getEntries().get(table2ConditionIndex))<0) {
                             ArrayList<Cell>newRow=new ArrayList<>();
-                            for(int k=0;k<whichTable.size();i++){
+                            for(int k=0;k<whichTable.size();k++){
                                 if(whichTable.get(k)==1){
                                     newRow.add(table1Row.get(i).getEntries().get(index.get(k)));
                                 }else {
-                                    newRow.add(table2Row.get(i).getEntries().get(index.get(k)));
+                                    newRow.add(table2Row.get(j).getEntries().get(index.get(k)));
                                 }
                             }
                             rows.add(new Row(newRow));
@@ -789,11 +791,11 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                     for (int j = 0; j < table2Row.size(); j++) {
                         if (table1Row.get(i).getEntries().get(table1ConditionIndex).compareTo(table2Row.get(j).getEntries().get(table2ConditionIndex))>0) {
                             ArrayList<Cell>newRow=new ArrayList<>();
-                            for(int k=0;k<whichTable.size();i++){
+                            for(int k=0;k<whichTable.size();k++){
                                 if(whichTable.get(k)==1){
                                     newRow.add(table1Row.get(i).getEntries().get(index.get(k)));
                                 }else {
-                                    newRow.add(table2Row.get(i).getEntries().get(index.get(k)));
+                                    newRow.add(table2Row.get(j).getEntries().get(index.get(k)));
                                 }
                             }
                             rows.add(new Row(newRow));
