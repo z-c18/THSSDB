@@ -68,7 +68,7 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
             default:
                 break;
         }
-        return value
+        return value;
     }
 
     public QueryResult visitSql_stmt(SQLParser.Sql_stmtContext ctx) {
@@ -390,7 +390,34 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
      表格项查询
      */
     @Override
-    public QueryResult visitSelect_stmt(SQLParser.Select_stmtContext ctx) {return null;}
+    public QueryResult visitSelect_stmt(SQLParser.Select_stmtContext ctx) {
+        ArrayList<Column>table1ColumnName=new ArrayList<>(),table2ColumnName=new ArrayList<>();
+        ArrayList<Row>table1Row=new ArrayList<>(),table2Row=new ArrayList<>();
+        ArrayList<String>attTable=new ArrayList<>(),attName=new ArrayList<>();
+        String table1Name=ctx.table_query(0).table_name(0).getText();
+        String table2Name=null;
+        Table table1=manager.currentDatabase.get(table1Name);
+        if(ctx.table_query(0).K_ON()==null){
+            if(ctx.K_WHERE()==null){
+                List<String>columns=new ArrayList<>();
+                List<Integer>columnIndex=new ArrayList<>();
+                for(int i=0;i<ctx.result_column().size();i++){
+                    columns.add(ctx.result_column(i).column_full_name().column_name().getText());
+
+                }
+
+            }else {
+
+            }
+        }else {//ON
+            for(int i=0;i<ctx.result_column().size();i++){
+                String tableName=ctx.result_column(i).column_full_name().table_name().getText();
+                String columnName=ctx.result_column(i).column_full_name().column_name().getText();
+            }
+
+        }
+        return null;
+    }
 
     /**
      退出
