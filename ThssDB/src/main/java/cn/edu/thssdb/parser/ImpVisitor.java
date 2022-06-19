@@ -5,12 +5,11 @@ package cn.edu.thssdb.parser;
 
 import cn.edu.thssdb.exception.DatabaseNotExistException;
 import cn.edu.thssdb.query.QueryResult;
-import cn.edu.thssdb.schema.Column;
-import cn.edu.thssdb.schema.Database;
-import cn.edu.thssdb.schema.Manager;
+import cn.edu.thssdb.schema.*;
 import cn.edu.thssdb.type.ColumnType;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import static cn.edu.thssdb.type.ColumnType.*;
@@ -222,7 +221,61 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
      表格项删除
      */
     @Override
-    public String visitDelete_stmt(SQLParser.Delete_stmtContext ctx) {return null;}
+    public String visitDelete_stmt(SQLParser.Delete_stmtContext ctx) {
+        String tableName=ctx.table_name().getText().toLowerCase();
+        Table table=manager.currentDatabase.get(tableName);
+        if(table==null)return "database doesn't exist.";
+        if(ctx.K_WHERE()!=null) {
+            String columnName = ctx.multiple_condition().condition().expression(0).comparer().column_full_name().column_name().getText().toLowerCase();
+            String compareValue = ctx.multiple_condition().condition().expression(1).comparer().literal_value().getText();
+            SQLParser.ComparatorContext comparator = ctx.multiple_condition().condition().comparator();
+            int columnIndex=0;
+            Cell value = null;
+            ColumnType columnType=null;
+            for (int i=0;i<table.columns.size();i++) {
+                Column x=table.columns.get(i);
+                if(x.getColumnName().equals(columnName)){
+                    columnType=x.getColumnType();
+                    columnIndex=i;
+                    break;
+                }
+            }
+            if(columnType==null)return "column doesn't exist.";
+            switch (columnType){
+                case STRING:
+                    value=new Cell(compareValue);
+                    break;
+                case INT:
+                    value=new Cell(Integer.parseInt(compareValue));
+                    break;
+                case LONG:
+                    value=new Cell(Long.parseLong(compareValue));
+                    break;
+                case FLOAT:
+                    value=new Cell(Float.parseFloat(compareValue));
+                    break;
+                case DOUBLE:
+                    value=new Cell(Double.parseDouble(compareValue));
+                    break;
+                default:
+                    break;
+            }
+            if(value==null)return "type doesn't exist.";
+            Iterator<Row> iterator=table.iterator();
+            while(iterator.hasNext()){
+                Row row=iterator.next();
+                if(row.getEntries().get(columnIndex).equals(value))iterator.remove();
+            }
+        }else {
+            Iterator<Row> iterator=table.iterator();
+            while(iterator.hasNext()){
+                iterator.next();
+                iterator.remove();
+//                table.delete(iterator.next());
+            }
+        }
+        return null;
+    }
 
     /**
      * TODO
