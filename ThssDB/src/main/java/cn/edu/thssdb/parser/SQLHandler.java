@@ -40,7 +40,7 @@ public class SQLHandler {
         if (statement.equals(Global.LOG_BEGIN_TRANSACTION)) {
             ArrayList<QueryResult> queryResults = new ArrayList<QueryResult>();
             try{
-                if (!manager.currentSessions.contains(session)){
+                if (manager.currentSessions!=null&&!manager.currentSessions.contains(session)){
                     manager.currentSessions.add(session);
                     ArrayList<String> x_lock_tables = new ArrayList<>();
                     manager.x_lockDict.put(session, x_lock_tables);

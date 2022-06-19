@@ -4,6 +4,8 @@ package cn.edu.thssdb.parser;
 // TODO: add logic for some important cases, refer to given implementations and SQLBaseVisitor.java for structures
 
 import cn.edu.thssdb.exception.DatabaseNotExistException;
+import cn.edu.thssdb.exception.SchemaLengthMismatchException;
+import cn.edu.thssdb.exception.TableNotExistException;
 import cn.edu.thssdb.query.QueryResult;
 import cn.edu.thssdb.schema.*;
 import cn.edu.thssdb.type.ColumnType;
@@ -238,7 +240,45 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
      表格项插入
      */
     @Override
-    public String visitInsert_stmt(SQLParser.Insert_stmtContext ctx) {return null;}
+    public String visitInsert_stmt(SQLParser.Insert_stmtContext ctx) {
+        try {
+            String tableName = ctx.table_name().getText().toLowerCase();
+            Table table = GetCurrentDB().get(tableName);
+            if (table == null){
+                throw new TableNotExistException();
+            }
+
+            List<SQLParser.Column_nameContext> columnName = ctx.column_name();
+            List<SQLParser.Value_entryContext> valueEntries = ctx.value_entry();
+            ArrayList<Integer> columnIndex = new ArrayList<>();
+            if (columnName.size() == 0){
+                for (int i = 0; i < table.columns.size(); ++i){
+                    columnIndex.add(i);
+                }
+            }
+            else{
+                for (int i = 0; i < columnName.size(); ++i){
+                    columnIndex.add(table.searchColumn(ctx.column_name(i).getText().toLowerCase()));
+                }
+            }
+            for (int j = 0; j < valueEntries.size(); ++j){
+                SQLParser.Value_entryContext valueEntry = ctx.value_entry(j);
+                if (valueEntry.literal_value().size() != columnIndex.size()){
+                    throw new SchemaLengthMismatchException(columnIndex.size(), valueEntry.literal_value().size(), " during insert");
+                }
+                Cell[] cells = new Cell[table.columns.size()];
+                for (int k = 0; k < columnIndex.size(); ++k){
+                    cells[columnIndex.get(k)] = createCell(table.columns.get(columnIndex.get(k)).getColumnType(),
+                                                            valueEntry.literal_value(k).getText());
+                }
+                table.insert(new Row(cells));
+            }
+
+            return "Insert into table " + tableName + ".";
+        } catch (Exception e) {
+            return e.getMessage();
+        }
+    }
 
     /**
      * TODO
