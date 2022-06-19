@@ -72,6 +72,8 @@ public class Table implements Iterable<Row> {
       }
   }
 
+  public int getPrimaryIndex(){return primaryIndex;}
+
 
   // Operations: get, insert, delete, update, dropTable, you can add other operations.
   // remember to use locks to fill the TODOs

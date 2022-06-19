@@ -28,6 +28,12 @@ public class Row implements Serializable {
       this.entries.add(new Cell(cell));
   }
 
+  public Row newUpdateRow(int index,Cell value){
+    ArrayList<Cell> newArray=getEntries();
+    newArray.set(index,value);
+    return new Row(newArray);
+  }
+
   public ArrayList<Cell> getEntries() {
     return entries;
   }
