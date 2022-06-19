@@ -265,4 +265,13 @@ public class Table implements Iterable<Row> {
     return s.toString() + "\n";
   }
 
+  public int searchColumn(String columnName) {
+    for (int i = 0; i < columns.size(); i++) {
+      Column x = columns.get(i);
+      if(x.getColumnName().equals(columnName)){
+        return i;
+      }
+    }
+    return -1;
+  }
 }

@@ -85,7 +85,8 @@ public class IServiceHandler implements IService.Iface {
       if (statement.length() == 0) continue;
       String cmd_head = command.split("\\s+")[0];
       ArrayList<QueryResult> queryResults;
-      if ((Arrays.asList(CMD_HEADS).contains(cmd_head.toLowerCase())) && !manager.currentSessions.contains(session)) {
+      // 增加 manager.currentSessions != null 的要求，不然会报错...
+      if ((Arrays.asList(CMD_HEADS).contains(cmd_head.toLowerCase())) && !(manager.currentSessions != null && manager.currentSessions.contains(session))) {
         sqlHandler.evaluate("begin transaction", session);
         queryResults = sqlHandler.evaluate(statement, session);
         sqlHandler.evaluate("commit", session);
