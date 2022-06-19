@@ -7,6 +7,7 @@ import cn.edu.thssdb.exception.DatabaseNotExistException;
 import cn.edu.thssdb.exception.SchemaLengthMismatchException;
 import cn.edu.thssdb.exception.TableNotExistException;
 import cn.edu.thssdb.query.QueryResult;
+import cn.edu.thssdb.query.QueryTable;
 import cn.edu.thssdb.schema.*;
 import cn.edu.thssdb.type.ColumnType;
 
@@ -432,29 +433,124 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
     @Override
     public QueryResult visitSelect_stmt(SQLParser.Select_stmtContext ctx) {
         ArrayList<Column>table1ColumnName=new ArrayList<>(),table2ColumnName=new ArrayList<>();
-        ArrayList<Row>table1Row=new ArrayList<>(),table2Row=new ArrayList<>();
-        ArrayList<String>attTable=new ArrayList<>(),attName=new ArrayList<>();
+        ArrayList<Integer>
+        List<Row>table1Row=new ArrayList<>(),table2Row=new ArrayList<>();
+        List<String>attTable=new ArrayList<>(),attName=new ArrayList<>();
         String table1Name=ctx.table_query(0).table_name(0).getText();
         String table2Name=null;
         Table table1=manager.currentDatabase.get(table1Name);
         if(ctx.table_query(0).K_ON()==null){
-            if(ctx.K_WHERE()==null){
+            if(ctx.K_WHERE()!=null){
                 List<String>columns=new ArrayList<>();
                 List<Integer>columnIndex=new ArrayList<>();
                 for(int i=0;i<ctx.result_column().size();i++){
                     columns.add(ctx.result_column(i).column_full_name().column_name().getText());
-
+                    columnIndex.add(table1.searchColumn(ctx.result_column(i).column_full_name().column_name().getText()));
+                }
+                String conditionColumnName = ctx.multiple_condition().condition().expression(0).comparer().column_full_name().column_name().getText().toLowerCase();
+                String conditionCompareValue = ctx.multiple_condition().condition().expression(1).comparer().literal_value().getText();
+                SQLParser.ComparatorContext comparator = ctx.multiple_condition().condition().comparator();
+                int conditionIndex=table1.searchColumn(conditionColumnName);
+                ColumnType conditionType=table1.columns.get(conditionIndex).getColumnType();
+                Cell conditionValue=createCell(conditionType,conditionCompareValue);
+                Iterator<Row> iterator=table1.iterator();
+                if(ctx.multiple_condition().condition().comparator().EQ()!=null) {
+                    while (iterator.hasNext()) {
+                        Row row = iterator.next();
+                        if (row.getEntries().get(conditionIndex).compareTo(conditionValue)==0) {
+                            ArrayList<Cell> newRow=new ArrayList<>();
+                            for(int i=0;i<columnIndex.size();i++){
+                                newRow.add(row.getEntries().get(columnIndex.get(i)));
+                            }
+                            table1Row.add(new Row(newRow));
+                        }
+                    }
+                }else if(ctx.multiple_condition().condition().comparator().NE()!=null) {
+                    while (iterator.hasNext()) {
+                        Row row = iterator.next();
+                        if (row.getEntries().get(conditionIndex).compareTo(conditionValue)!=0) {
+                            ArrayList<Cell> newRow=new ArrayList<>();
+                            for(int i=0;i<columnIndex.size();i++){
+                                newRow.add(row.getEntries().get(columnIndex.get(i)));
+                            }
+                            table1Row.add(new Row(newRow));
+                        }
+                    }
+                }else if(ctx.multiple_condition().condition().comparator().LE()!=null) {
+                    while (iterator.hasNext()) {
+                        Row row = iterator.next();
+                        if (row.getEntries().get(conditionIndex).compareTo(conditionValue)<=0) {
+                            ArrayList<Cell> newRow=new ArrayList<>();
+                            for(int i=0;i<columnIndex.size();i++){
+                                newRow.add(row.getEntries().get(columnIndex.get(i)));
+                            }
+                            table1Row.add(new Row(newRow));
+                        }
+                    }
+                }else if(ctx.multiple_condition().condition().comparator().GE()!=null) {
+                    while (iterator.hasNext()) {
+                        Row row = iterator.next();
+                        if (row.getEntries().get(conditionIndex).compareTo(conditionValue)>=0) {
+                            ArrayList<Cell> newRow=new ArrayList<>();
+                            for(int i=0;i<columnIndex.size();i++){
+                                newRow.add(row.getEntries().get(columnIndex.get(i)));
+                            }
+                            table1Row.add(new Row(newRow));
+                        }
+                    }
+                }else if(ctx.multiple_condition().condition().comparator().LT()!=null) {
+                    while (iterator.hasNext()) {
+                        Row row = iterator.next();
+                        if (row.getEntries().get(conditionIndex).compareTo(conditionValue)<0) {
+                            ArrayList<Cell> newRow=new ArrayList<>();
+                            for(int i=0;i<columnIndex.size();i++){
+                                newRow.add(row.getEntries().get(columnIndex.get(i)));
+                            }
+                            table1Row.add(new Row(newRow));
+                        }
+                    }
+                }else if(ctx.multiple_condition().condition().comparator().GT()!=null) {
+                    while (iterator.hasNext()) {
+                        Row row = iterator.next();
+                        if (row.getEntries().get(conditionIndex).compareTo(conditionValue)>0) {
+                            ArrayList<Cell> newRow=new ArrayList<>();
+                            for(int i=0;i<columnIndex.size();i++){
+                                newRow.add(row.getEntries().get(columnIndex.get(i)));
+                            }
+                            table1Row.add(new Row(newRow));
+                        }
+                    }
+                }
+                return new QueryResult(new QueryTable[] {new QueryTable(columns,table1Row)});
+            }else {
+                List<String>columns=new ArrayList<>();
+                List<Integer>columnIndex=new ArrayList<>();
+                for(int i=0;i<ctx.result_column().size();i++){
+                    columns.add(ctx.result_column(i).column_full_name().column_name().getText());
+                    columnIndex.add(table1.searchColumn(ctx.result_column(i).column_full_name().column_name().getText()));
+                }
+                Iterator<Row> iterator=table1.iterator();
+                while (iterator.hasNext()) {
+                    Row row = iterator.next();
+                    ArrayList<Cell> newRow=new ArrayList<>();
+                    for(int i=0;i<columnIndex.size();i++){
+                        newRow.add(row.getEntries().get(columnIndex.get(i)));
+                    }
+                    table1Row.add(new Row(newRow));
                 }
 
-            }else {
-
+                return new QueryResult(new QueryTable[] {new QueryTable(columns,table1Row)});
             }
         }else {//ON
             for(int i=0;i<ctx.result_column().size();i++){
                 String tableName=ctx.result_column(i).column_full_name().table_name().getText();
                 String columnName=ctx.result_column(i).column_full_name().column_name().getText();
             }
+            if(ctx.K_WHERE()!=null){
 
+            }else {
+
+            }
         }
         return null;
     }

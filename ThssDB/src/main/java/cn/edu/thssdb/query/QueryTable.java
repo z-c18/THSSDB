@@ -21,7 +21,7 @@ public class QueryTable implements Iterable<Row> {
   public List<String>columns;
   public List<Row>rows;
 
-  QueryTable(List<String>columns, List<Row> rows) {
+  public QueryTable(List<String>columns, List<Row> rows) {
     // TODO
     this.columns=columns;
     this.rows=rows;
