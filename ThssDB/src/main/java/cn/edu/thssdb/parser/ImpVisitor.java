@@ -85,6 +85,7 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
         if (ctx.update_stmt() != null) return new QueryResult(visitUpdate_stmt(ctx.update_stmt()));
         if (ctx.select_stmt() != null) return visitSelect_stmt(ctx.select_stmt());
         if (ctx.quit_stmt() != null) return new QueryResult(visitQuit_stmt(ctx.quit_stmt()));
+        if (ctx.show_meta_stmt() != null) return new QueryResult(visitShow_meta_stmt(ctx.show_meta_stmt()));
         return null;
     }
 
@@ -566,5 +567,30 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
             return e.getMessage();
         }
         return "Quit.";
+    }
+
+    /**
+     展示表格模式信息
+     */
+    @Override
+    public String visitShow_meta_stmt(SQLParser.Show_meta_stmtContext ctx) {
+        try {
+            String tableName = ctx.table_name().getText().toLowerCase();
+            String str = "Show table " + tableName +"\n-----------------------------------\n";
+            Table table = GetCurrentDB().get(tableName);
+            for (int i = 0; i < table.columns.size(); i++){
+                Column column = table.columns.get(i);
+                str += " " + column.getColumnName()
+                     + " \t\t " + column.getColumnType() +(column.getColumnType()==STRING ? "(" + column.getMaxLength() + ")":"" )
+                     + " \t\t " + (column.isPrimary()?"Primary Key":"")
+                     + " \t\t " + (column.cantBeNull()?"Not Null":"")+    "\n";
+            }
+            str += "-----------------------------------\n";
+            str += tableName + " has "+ table.columns.size() + " column(s). The primary key is " + table.columns.get(table.getPrimaryIndex()).getColumnName() + ".\n";
+            return str;
+        } catch (Exception e) {
+            return e.getMessage();
+        }
+
     }
 }
