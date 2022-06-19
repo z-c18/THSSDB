@@ -573,6 +573,8 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                     table1Row.add(new Row(newRow));
                 }
 
+                QueryResult ret=new QueryResult(new QueryTable[]{new QueryTable(columns,table1Row)});
+
                 return new QueryResult(new QueryTable[] {new QueryTable(columns,table1Row)});
             }
         }else {//ON
@@ -799,7 +801,6 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                     }
                 }
             }
-
             return new QueryResult(new QueryTable[]{new QueryTable(columns,rows)});
         }
     }

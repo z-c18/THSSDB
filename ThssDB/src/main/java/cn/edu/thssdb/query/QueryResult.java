@@ -5,6 +5,7 @@ import cn.edu.thssdb.schema.MetaInfo;
 import cn.edu.thssdb.schema.Row;
 import cn.edu.thssdb.type.QueryResultType;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -29,6 +30,7 @@ public class QueryResult {
   public QueryResult(QueryTable[] queryTables) {
     this.resultType = QueryResultType.SELECT;
     this.errorMessage = null;
+    results=new ArrayList<>();
     // TODO
     for (QueryTable queryTable:queryTables) {
       if(columnNames == null || columnNames.size()==0){
