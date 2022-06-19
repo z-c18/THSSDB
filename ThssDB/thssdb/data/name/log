@@ -1,0 +1,6 @@
+begin transaction
+commit
+begin transaction
+commit
+begin transaction
+commit

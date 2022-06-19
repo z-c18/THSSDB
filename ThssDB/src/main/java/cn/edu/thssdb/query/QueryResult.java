@@ -31,7 +31,7 @@ public class QueryResult {
     this.errorMessage = null;
     // TODO
     for (QueryTable queryTable:queryTables) {
-      if(columnNames.size()==0){
+      if(columnNames == null || columnNames.size()==0){
         columnNames=queryTable.columns;
       }
       Iterator<Row> iterator=queryTable.iterator();

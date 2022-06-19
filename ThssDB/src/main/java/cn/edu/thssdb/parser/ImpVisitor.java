@@ -4,6 +4,7 @@ package cn.edu.thssdb.parser;
 // TODO: add logic for some important cases, refer to given implementations and SQLBaseVisitor.java for structures
 
 import cn.edu.thssdb.exception.DatabaseNotExistException;
+import cn.edu.thssdb.exception.KeyNotExistException;
 import cn.edu.thssdb.exception.SchemaLengthMismatchException;
 import cn.edu.thssdb.exception.TableNotExistException;
 import cn.edu.thssdb.query.QueryResult;
@@ -16,6 +17,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
+import static cn.edu.thssdb.schema.Column.parseEntry;
 import static cn.edu.thssdb.type.ColumnType.*;
 
 /**
@@ -261,7 +263,11 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
             }
             else{
                 for (int i = 0; i < columnName.size(); ++i){
-                    columnIndex.add(table.searchColumn(ctx.column_name(i).getText().toLowerCase()));
+                    int index = table.searchColumn(ctx.column_name(i).getText().toLowerCase());
+                    if (index < 0){
+                        throw new KeyNotExistException();
+                    }
+                    columnIndex.add(index);
                 }
             }
             for (int j = 0; j < valueEntries.size(); ++j){
@@ -271,8 +277,7 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                 }
                 Cell[] cells = new Cell[table.columns.size()];
                 for (int k = 0; k < columnIndex.size(); ++k){
-                    cells[columnIndex.get(k)] = createCell(table.columns.get(columnIndex.get(k)).getColumnType(),
-                                                            valueEntry.literal_value(k).getText());
+                    cells[columnIndex.get(k)] = parseEntry(valueEntry.literal_value(k).getText(), table.columns.get(columnIndex.get(k)));
                 }
                 table.insert(new Row(cells));
             }
@@ -289,28 +294,38 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
      */
     @Override
     public String visitDelete_stmt(SQLParser.Delete_stmtContext ctx) {
-        String tableName=ctx.table_name().getText().toLowerCase();
-        Table table=manager.currentDatabase.get(tableName);
-        if(table==null)return "database doesn't exist.";
+        String tableName = ctx.table_name().getText().toLowerCase();
+        Table table = GetCurrentDB().get(tableName);
+        if (table == null){
+            throw new TableNotExistException();
+        }
+//        String tableName=ctx.table_name().getText().toLowerCase();
+//        Table table=manager.currentDatabase.get(tableName);
+//        if(table==null)return "database doesn't exist.";
         String retString="delete "+tableName;
 
         String columnName = ctx.multiple_condition().condition().expression(0).comparer().column_full_name().column_name().getText().toLowerCase();
         String compareValue = ctx.multiple_condition().condition().expression(1).comparer().literal_value().getText();
         SQLParser.ComparatorContext comparator = ctx.multiple_condition().condition().comparator();
-        int columnIndex=0;
-        Cell value = null;
-        ColumnType columnType=null;
-        for (int i=0;i<table.columns.size();i++) {
-            Column x=table.columns.get(i);
-            if(x.getColumnName().equals(columnName)){
-                columnType=x.getColumnType();
-                columnIndex=i;
-                break;
-            }
+        int columnIndex = table.searchColumn(columnName);
+        if (columnIndex < 0) {
+            throw new KeyNotExistException();
         }
-        if(columnType==null)return "column doesn't exist.";
-        value=createCell(columnType,compareValue);
-        if(value==null)return "type doesn't exist.";
+        Cell value = parseEntry(compareValue, table.columns.get(columnIndex));
+//        if(value==null)return "type doesn't exist.";
+//        Cell value = null;
+//        ColumnType columnType=null;
+//        for (int i=0;i<table.columns.size();i++) {
+//            Column x=table.columns.get(i);
+//            if(x.getColumnName().equals(columnName)){
+//                columnType=x.getColumnType();
+//                columnIndex=i;
+//                break;
+//            }
+//        }
+//        if(columnType==null)return "column doesn't exist.";
+//        value=createCell(columnType,compareValue);
+//        if(value==null)return "type doesn't exist.";
         ArrayList<Row>toDelete=new ArrayList<>();
         Iterator<Row> iterator=table.iterator();
         if(ctx.multiple_condition().condition().comparator().EQ()!=null) {
@@ -358,35 +373,53 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
      */
     @Override
     public String visitUpdate_stmt(SQLParser.Update_stmtContext ctx) {
-        String tableName=ctx.table_name().getText().toLowerCase();
-        Table table=manager.currentDatabase.get(tableName);
-        if(table==null)return "database doesn't exist.";
+        String tableName = ctx.table_name().getText().toLowerCase();
+        Table table = GetCurrentDB().get(tableName);
+        if (table == null){
+            throw new TableNotExistException();
+        }
+//        String tableName=ctx.table_name().getText().toLowerCase();
+//        Table table=manager.currentDatabase.get(tableName);
+//        if(table==null)return "database doesn't exist.";
         String retString="update "+tableName;
+
         String expressionColumnName=ctx.column_name().getText().toLowerCase();
         String expressionUpdateValue=ctx.expression().comparer().literal_value().getText();
         String conditionColumnName = ctx.multiple_condition().condition().expression(0).comparer().column_full_name().column_name().getText().toLowerCase();
         String conditionCompareValue = ctx.multiple_condition().condition().expression(1).comparer().literal_value().getText();
         SQLParser.ComparatorContext comparator = ctx.multiple_condition().condition().comparator();
-        int expressionColumnIndex=0,conditionColumnIndex=0,primaryIndex=table.getPrimaryIndex();
-        Cell expressionValue = null,conditionValue=null;
-        ColumnType expressionColumnType=null,conditionColumnType=null;
-        for (int i=0;i<table.columns.size();i++) {
-            Column x=table.columns.get(i);
-            if(x.getColumnName().equals(expressionColumnName)){
-                expressionColumnType=x.getColumnType();
-                expressionColumnIndex=i;
-            }
-            if(x.getColumnName().equals(conditionColumnName)){
-                conditionColumnType=x.getColumnType();
-                conditionColumnIndex=i;
-            }
+        int primaryIndex=table.getPrimaryIndex();
+
+        int expressionColumnIndex = table.searchColumn(expressionColumnName);
+        if (expressionColumnIndex < 0){
+            throw new KeyNotExistException();
         }
-        if(expressionColumnType==null)return "column doesn't exist.";
-        if(conditionColumnType==null)return "column doesn't exist.";
-        expressionValue=createCell(expressionColumnType,expressionUpdateValue);
-        conditionValue=createCell(conditionColumnType,conditionCompareValue);
-        if(expressionValue==null)return "type doesn't exist.";
-        if(conditionValue==null)return "type doesn't exist.";
+        int conditionColumnIndex = table.searchColumn(conditionColumnName);
+        if (conditionColumnIndex < 0){
+            throw new KeyNotExistException();
+        }
+        Cell expressionValue=parseEntry(expressionUpdateValue, table.columns.get(expressionColumnIndex));
+        Cell conditionValue=parseEntry(conditionCompareValue, table.columns.get(conditionColumnIndex));
+//        int expressionColumnIndex=0,conditionColumnIndex=0,primaryIndex=table.getPrimaryIndex();
+//        Cell expressionValue = null,conditionValue=null;
+//        ColumnType expressionColumnType=null,conditionColumnType=null;
+//        for (int i=0;i<table.columns.size();i++) {
+//            Column x=table.columns.get(i);
+//            if(x.getColumnName().equals(expressionColumnName)){
+//                expressionColumnType=x.getColumnType();
+//                expressionColumnIndex=i;
+//            }
+//            if(x.getColumnName().equals(conditionColumnName)){
+//                conditionColumnType=x.getColumnType();
+//                conditionColumnIndex=i;
+//            }
+//        }
+//        if(expressionColumnType==null)return "column doesn't exist.";
+//        if(conditionColumnType==null)return "column doesn't exist.";
+//        expressionValue=createCell(expressionColumnType,expressionUpdateValue);
+//        conditionValue=createCell(conditionColumnType,conditionCompareValue);
+//        if(expressionValue==null)return "type doesn't exist.";
+//        if(conditionValue==null)return "type doesn't exist.";
         ArrayList<Row>toUpdate=new ArrayList<>();
         Iterator<Row> iterator=table.iterator();
         if(ctx.multiple_condition().condition().comparator().EQ()!=null) {
