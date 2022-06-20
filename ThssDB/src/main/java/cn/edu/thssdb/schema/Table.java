@@ -27,12 +27,27 @@ public class Table implements Iterable<Row> {
   // ADD lock variables for S, X locks and etc here.
 
   // TODO: table/tuple level locks
-  public Boolean testSLock(Long sessionId){ return false;}
-  public void takeSLock(Long sessionId) {}
-  public void releaseSLock(Long sessionId){}
-  public Boolean testXLock(Long sessionId){ return false;}
-  public Boolean takeXLock(Long sessionId){ return false;} // 在test成功前提下拿X锁。返回值false表示session之前已拥有这个表的X锁。
-  public void releaseXLock(Long sessionId){}
+  public Boolean testSLock(Long sessionId){
+    if(lock.isWriteLocked())return false;
+    return true;
+  }
+  public void takeSLock(Long sessionId) {
+    lock.readLock().lock();
+  }
+  public void releaseSLock(Long sessionId){
+    lock.readLock().unlock();
+  }
+  public Boolean testXLock(Long sessionId){
+    if(lock.isWriteLocked()||lock.getReadLockCount()!=0)return false;
+    return true;
+  }
+  public Boolean takeXLock(Long sessionId){
+    lock.writeLock().lock();
+    return true;
+  } // 在test成功前提下拿X锁。返回值false表示session之前已拥有这个表的X锁。
+  public void releaseXLock(Long sessionId){
+    lock.writeLock().unlock();
+  }
 
 
   // Initiate: Table, recover
