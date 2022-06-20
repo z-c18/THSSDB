@@ -33,3 +33,15 @@
 0#begin transaction
 0#insert into person values('spy', 202)
 0#commit
+0#begin transaction
+0#insert into person values('spy',2002)
+0#commit
+0#begin transaction
+0#insert into person values('spy',2022)
+0#commit
+1#begin transaction
+1#insert into person('spy',202222)
+1#insert into person values('spy',202222)
+0#begin transaction
+1#commit
+0#commit
