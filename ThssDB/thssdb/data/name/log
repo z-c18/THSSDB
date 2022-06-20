@@ -1,19 +1,35 @@
-begin transaction
-commit
-begin transaction
-commit
-begin transaction
-commit
-begin transaction
-insert into person values('X', 200)
-begin transaction
-insert into person values('Q', 205)
-commit
-begin transaction
-begin transaction
-insert into person values("A", 203)
-insert into person values('A', 203)
-commit
-begin transaction
-insert into person values('A', 206)
-commit
+0#begin transaction
+0#insert into person values('A',2)
+0#commit
+0#begin transaction
+0#insert into person values('A',3)
+0#commit
+0#begin transaction
+0#insert into person values('A',5)
+0#commit
+0#begin transaction
+0#commit
+1#begin transaction
+1#commit
+0#begin transaction
+0#insert into person values('A',6)
+0#commit
+1#begin transaction
+1#commit
+0#begin transaction
+0#insert into person values('A',7)
+1#begin transaction
+0#commit
+0#commit
+1#begin transaction
+1#insert into person values('spy',204)
+0#begin transaction
+1#commit
+0#commit
+0#begin transaction
+0#insert into person values('spy',2)
+1#begin transaction
+0#commit
+0#begin transaction
+0#insert into person values('spy', 202)
+0#commit
