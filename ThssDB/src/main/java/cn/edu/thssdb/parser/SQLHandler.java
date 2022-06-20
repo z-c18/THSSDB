@@ -68,9 +68,7 @@ public class SQLHandler {
                     }
                     String databaseName = currentDB.getDatabaseName();
 
-                    System.out.println(1111);
                     ArrayList<String> table_list = manager.x_lockDict.get(session);
-                    System.out.println(2222);
                     for (String table_name : table_list) {
                         Table currentTable = currentDB.get(table_name);
                         try {
@@ -81,7 +79,6 @@ public class SQLHandler {
                         }
                     }
                     manager.currentSessions.remove(session);
-                    System.out.println(3333);
                     table_list.clear();
                     manager.x_lockDict.put(session,table_list);
                     String databaseLogFilename = Database.getDatabaseLogFilePath(databaseName);
