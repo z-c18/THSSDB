@@ -252,6 +252,14 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
             if (table == null){
                 throw new TableNotExistException();
             }
+            while(!table.testXLock(session));
+            table.takeXLock(session);
+            ArrayList<String> table_list = manager.x_lockDict.get(session);
+            table_list.add(tableName);
+            manager.x_lockDict.put(session,table_list);
+            if (table == null){
+                throw new TableNotExistException();
+            }
 
             List<SQLParser.Column_nameContext> columnName = ctx.column_name();
             List<SQLParser.Value_entryContext> valueEntries = ctx.value_entry();
@@ -299,6 +307,11 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
         if (table == null){
             throw new TableNotExistException();
         }
+        while(!table.testXLock(session));
+        table.takeXLock(session);
+        ArrayList<String> table_list = manager.x_lockDict.get(session);
+        table_list.add(tableName);
+        manager.x_lockDict.put(session,table_list);
 //        String tableName=ctx.table_name().getText().toLowerCase();
 //        Table table=manager.currentDatabase.get(tableName);
 //        if(table==null)return "database doesn't exist.";
@@ -378,6 +391,12 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
         if (table == null){
             throw new TableNotExistException();
         }
+        while(!table.testXLock(session));
+        table.takeXLock(session);
+
+        ArrayList<String> table_list = manager.x_lockDict.get(session);
+        table_list.add(tableName);
+        manager.x_lockDict.put(session,table_list);
 //        String tableName=ctx.table_name().getText().toLowerCase();
 //        Table table=manager.currentDatabase.get(tableName);
 //        if(table==null)return "database doesn't exist.";
@@ -472,8 +491,10 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
         ArrayList<Row>table1Row=new ArrayList<>(),table2Row=new ArrayList<>();
         String table1Name=ctx.table_query(0).table_name(0).getText();
         String table2Name=null;
-        Table table1=manager.currentDatabase.get(table1Name);
         if(ctx.table_query(0).K_ON()==null){
+            Table table1=manager.currentDatabase.get(table1Name);
+            while(!table1.testSLock(session));
+            table1.takeSLock(session);
             if(ctx.K_WHERE()!=null){
                 List<String>columns=new ArrayList<>();
                 List<Integer>columnIndex=new ArrayList<>();
@@ -485,8 +506,9 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                 String conditionCompareValue = ctx.multiple_condition().condition().expression(1).comparer().literal_value().getText();
                 SQLParser.ComparatorContext comparator = ctx.multiple_condition().condition().comparator();
                 int conditionIndex=table1.searchColumn(conditionColumnName);
-                ColumnType conditionType=table1.columns.get(conditionIndex).getColumnType();
-                Cell conditionValue=createCell(conditionType,conditionCompareValue);
+                Cell conditionValue=parseEntry(conditionCompareValue, table1.columns.get(conditionIndex));
+//                ColumnType conditionType=table1.columns.get(conditionIndex).getColumnType();
+//                Cell conditionValue=createCell(conditionType,conditionCompareValue);
                 Iterator<Row> iterator=table1.iterator();
                 if(ctx.multiple_condition().condition().comparator().EQ()!=null) {
                     while (iterator.hasNext()) {
@@ -555,6 +577,7 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                         }
                     }
                 }
+                table1.releaseSLock(session);
                 return new QueryResult(new QueryTable[] {new QueryTable(columns,table1Row)});
             }else {
                 List<String>columns=new ArrayList<>();
@@ -573,13 +596,18 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                     table1Row.add(new Row(newRow));
                 }
 
-                QueryResult ret=new QueryResult(new QueryTable[]{new QueryTable(columns,table1Row)});
+//                QueryResult ret=new QueryResult(new QueryTable[]{new QueryTable(columns,table1Row)});
 
+                table1.releaseSLock(session);
                 return new QueryResult(new QueryTable[] {new QueryTable(columns,table1Row)});
             }
         }else {//ON
             table2Name=ctx.table_query(0).table_name(1).getText();
+            Table table1=manager.currentDatabase.get(table1Name);
             Table table2=manager.currentDatabase.get(table2Name);
+            while(!table1.testSLock(session)||!table2.testSLock(session));
+            table1.takeSLock(session);
+            table2.takeSLock(session);
 
             String table1ConditionColumn=ctx.table_query(0).multiple_condition().condition().expression(0).comparer().column_full_name().column_name().getText();
             String table2ConditionColumn=ctx.table_query(0).multiple_condition().condition().expression(1).comparer().column_full_name().column_name().getText();
@@ -594,8 +622,9 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                 SQLParser.ComparatorContext comparator = ctx.multiple_condition().condition().comparator();
                 if(conditionTableName==table1Name){
                     int conditionIndex=table1.searchColumn(conditionColumnName);
-                    ColumnType conditionType=table1.columns.get(conditionIndex).getColumnType();
-                    Cell conditionValue=createCell(conditionType,conditionCompareValue);
+                    Cell conditionValue=parseEntry(conditionCompareValue, table1.columns.get(conditionIndex));
+//                    ColumnType conditionType=table1.columns.get(conditionIndex).getColumnType();
+//                    Cell conditionValue=createCell(conditionType,conditionCompareValue);
                     Iterator<Row> iterator=table1.iterator();
                     if(ctx.multiple_condition().condition().comparator().EQ()!=null) {
                         while (iterator.hasNext()) {
@@ -635,8 +664,9 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
 
                 }else {
                     int conditionIndex=table2.searchColumn(conditionColumnName);
-                    ColumnType conditionType=table2.columns.get(conditionIndex).getColumnType();
-                    Cell conditionValue=createCell(conditionType,conditionCompareValue);
+                    Cell conditionValue=parseEntry(conditionCompareValue, table2.columns.get(conditionIndex));
+//                    ColumnType conditionType=table2.columns.get(conditionIndex).getColumnType();
+//                    Cell conditionValue=createCell(conditionType,conditionCompareValue);
                     Iterator<Row> iterator=table2.iterator();
                     if(ctx.multiple_condition().condition().comparator().EQ()!=null) {
                         while (iterator.hasNext()) {
@@ -803,6 +833,8 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                     }
                 }
             }
+            table1.releaseSLock(session);
+            table2.releaseSLock(session);
             return new QueryResult(new QueryTable[]{new QueryTable(columns,rows)});
         }
     }

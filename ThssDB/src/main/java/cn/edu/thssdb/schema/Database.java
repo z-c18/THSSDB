@@ -3,6 +3,7 @@ package cn.edu.thssdb.schema;
 import cn.edu.thssdb.exception.DuplicateTableException;
 import cn.edu.thssdb.exception.FileIOException;
 import cn.edu.thssdb.exception.TableNotExistException;
+import cn.edu.thssdb.exception.TableOccupiedException;
 import cn.edu.thssdb.query.QueryResult;
 import cn.edu.thssdb.query.QueryTable;
 import cn.edu.thssdb.common.Global;
@@ -86,7 +87,8 @@ public class Database {
       File file = new File(filename);
       if (file.isFile() && !file.delete())
         throw new FileIOException(tableName + " _meta  when drop a table in database");
-
+      if(table.lock.isWriteLocked())
+        throw new TableOccupiedException(tableName);
       table.dropTable();
       this.tableMap.remove(tableName);
     } finally {
