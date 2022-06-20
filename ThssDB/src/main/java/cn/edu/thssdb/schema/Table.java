@@ -23,30 +23,40 @@ public class Table implements Iterable<Row> {
   public ArrayList<Column> columns;
   public BPlusTree<Cell, Row> index;
   private int primaryIndex;
-
+  private Boolean writeLocked;
+  private int readLocked;
   // ADD lock variables for S, X locks and etc here.
 
   // TODO: table/tuple level locks
   public Boolean testSLock(Long sessionId){
-    if(lock.isWriteLocked())return false;
+    if(writeLocked)return false;
     return true;
+//    if(lock.isWriteLocked())return false;
+//    return true;
   }
   public void takeSLock(Long sessionId) {
-    lock.readLock().lock();
+    readLocked += 1;
+//    lock.readLock().lock();
   }
   public void releaseSLock(Long sessionId){
-    lock.readLock().unlock();
+    readLocked -= 1;
+//    lock.readLock().unlock();
   }
   public Boolean testXLock(Long sessionId){
-    if(lock.isWriteLocked()||lock.getReadLockCount()!=0)return false;
+    if(writeLocked||readLocked!=0)return false;
     return true;
+
+//    if(lock.isWriteLocked()||lock.getReadLockCount()!=0)return false;
+//    return true;
   }
-  public Boolean takeXLock(Long sessionId){
-    lock.writeLock().lock();
-    return true;
+  public void takeXLock(Long sessionId){
+    writeLocked = true;
+//    lock.writeLock().lock();
+//    return true;
   } // 在test成功前提下拿X锁。返回值false表示session之前已拥有这个表的X锁。
   public void releaseXLock(Long sessionId){
-    lock.writeLock().unlock();
+    writeLocked = false;
+//    lock.writeLock().unlock();
   }
 
 
@@ -58,6 +68,9 @@ public class Table implements Iterable<Row> {
     this.columns = new ArrayList<>(Arrays.asList(columns));
     this.index = new BPlusTree<>();
     this.primaryIndex = -1;
+
+    this.writeLocked = false;
+    this.readLocked = 0;
 
     for (int i=0;i<this.columns.size();i++)
     {

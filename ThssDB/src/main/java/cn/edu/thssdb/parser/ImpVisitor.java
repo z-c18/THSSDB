@@ -246,30 +246,14 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
      */
     @Override
     public String visitInsert_stmt(SQLParser.Insert_stmtContext ctx) {
+        String tableName = ctx.table_name().getText().toLowerCase();
+        Table table = GetCurrentDB().get(tableName);
+        if (table == null){
+            throw new TableNotExistException();
+        }
+        while(!table.testXLock(session));
+        table.takeXLock(session);
         try {
-            String tableName = ctx.table_name().getText().toLowerCase();
-            Table table = GetCurrentDB().get(tableName);
-            if (table == null){
-                throw new TableNotExistException();
-            }
-            while(!table.testXLock(session)) {
-                ArrayList<String> table_list = manager.x_lockDict.get(session);
-                if(table_list.indexOf(tableName)!=-1){
-                    break;
-                }
-                try {
-                    Thread.currentThread().sleep(500);
-                }catch (InterruptedException ex){
-
-                }
-            }
-            try {
-                Thread.currentThread().sleep(500);
-            }catch (InterruptedException ex){
-
-            }
-            if(table.testXLock(session))
-                table.takeXLock(session);
             ArrayList<String> table_list = manager.x_lockDict.get(session);
             table_list.add(tableName);
             manager.x_lockDict.put(session,table_list);
@@ -308,6 +292,7 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
 
             return "Insert into table " + tableName + ".";
         } catch (Exception e) {
+            table.releaseXLock(session);
             return e.getMessage();
         }
     }
@@ -344,72 +329,60 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
         ArrayList<String> table_list = manager.x_lockDict.get(session);
         table_list.add(tableName);
         manager.x_lockDict.put(session,table_list);
-//        String tableName=ctx.table_name().getText().toLowerCase();
-//        Table table=manager.currentDatabase.get(tableName);
-//        if(table==null)return "database doesn't exist.";
-        String retString="delete "+tableName;
+        try {
+            String retString = "delete " + tableName;
 
-        String columnName = ctx.multiple_condition().condition().expression(0).comparer().column_full_name().column_name().getText().toLowerCase();
-        String compareValue = ctx.multiple_condition().condition().expression(1).comparer().literal_value().getText();
-        SQLParser.ComparatorContext comparator = ctx.multiple_condition().condition().comparator();
-        int columnIndex = table.searchColumn(columnName);
-        if (columnIndex < 0) {
-            throw new KeyNotExistException();
+            String columnName = ctx.multiple_condition().condition().expression(0).comparer().column_full_name().column_name().getText().toLowerCase();
+            String compareValue = ctx.multiple_condition().condition().expression(1).comparer().literal_value().getText();
+            SQLParser.ComparatorContext comparator = ctx.multiple_condition().condition().comparator();
+            int columnIndex = table.searchColumn(columnName);
+            if (columnIndex < 0) {
+                throw new KeyNotExistException();
+            }
+            Cell value = parseEntry(compareValue, table.columns.get(columnIndex));
+            ArrayList<Row> toDelete = new ArrayList<>();
+            Iterator<Row> iterator = table.iterator();
+            if (ctx.multiple_condition().condition().comparator().EQ() != null) {
+                while (iterator.hasNext()) {
+                    Row row = iterator.next();
+                    if (row.getEntries().get(columnIndex).compareTo(value) == 0) toDelete.add(row);
+                }
+            } else if (ctx.multiple_condition().condition().comparator().NE() != null) {
+                while (iterator.hasNext()) {
+                    Row row = iterator.next();
+                    if (row.getEntries().get(columnIndex).compareTo(value) != 0) toDelete.add(row);
+                }
+            } else if (ctx.multiple_condition().condition().comparator().LE() != null) {
+                while (iterator.hasNext()) {
+                    Row row = iterator.next();
+                    if (row.getEntries().get(columnIndex).compareTo(value) <= 0) toDelete.add(row);
+                }
+            } else if (ctx.multiple_condition().condition().comparator().GE() != null) {
+                while (iterator.hasNext()) {
+                    Row row = iterator.next();
+                    if (row.getEntries().get(columnIndex).compareTo(value) >= 0) toDelete.add(row);
+                }
+            } else if (ctx.multiple_condition().condition().comparator().LT() != null) {
+                while (iterator.hasNext()) {
+                    Row row = iterator.next();
+                    if (row.getEntries().get(columnIndex).compareTo(value) < 0) toDelete.add(row);
+                }
+            } else if (ctx.multiple_condition().condition().comparator().GT() != null) {
+                while (iterator.hasNext()) {
+                    Row row = iterator.next();
+                    if (row.getEntries().get(columnIndex).compareTo(value) > 0) toDelete.add(row);
+                }
+            } else {
+                return "operator doesn't exist";
+            }
+            for (Row x : toDelete) {
+                table.delete(x);
+            }
+            return retString;
+        } catch (Exception e) {
+            table.releaseXLock(session);
+            return e.getMessage();
         }
-        Cell value = parseEntry(compareValue, table.columns.get(columnIndex));
-//        if(value==null)return "type doesn't exist.";
-//        Cell value = null;
-//        ColumnType columnType=null;
-//        for (int i=0;i<table.columns.size();i++) {
-//            Column x=table.columns.get(i);
-//            if(x.getColumnName().equals(columnName)){
-//                columnType=x.getColumnType();
-//                columnIndex=i;
-//                break;
-//            }
-//        }
-//        if(columnType==null)return "column doesn't exist.";
-//        value=createCell(columnType,compareValue);
-//        if(value==null)return "type doesn't exist.";
-        ArrayList<Row>toDelete=new ArrayList<>();
-        Iterator<Row> iterator=table.iterator();
-        if(ctx.multiple_condition().condition().comparator().EQ()!=null) {
-            while (iterator.hasNext()) {
-                Row row = iterator.next();
-                if (row.getEntries().get(columnIndex).compareTo(value)==0) toDelete.add(row);
-            }
-        }else if(ctx.multiple_condition().condition().comparator().NE()!=null) {
-            while (iterator.hasNext()) {
-                Row row = iterator.next();
-                if (row.getEntries().get(columnIndex).compareTo(value)!=0) toDelete.add(row);
-            }
-        }else if(ctx.multiple_condition().condition().comparator().LE()!=null) {
-            while (iterator.hasNext()) {
-                Row row = iterator.next();
-                if (row.getEntries().get(columnIndex).compareTo(value)<=0) toDelete.add(row);
-            }
-        }else if(ctx.multiple_condition().condition().comparator().GE()!=null) {
-            while (iterator.hasNext()) {
-                Row row = iterator.next();
-                if (row.getEntries().get(columnIndex).compareTo(value)>=0) toDelete.add(row);
-            }
-        }else if(ctx.multiple_condition().condition().comparator().LT()!=null) {
-            while (iterator.hasNext()) {
-                Row row = iterator.next();
-                if (row.getEntries().get(columnIndex).compareTo(value)<0) toDelete.add(row);
-            }
-        }else if(ctx.multiple_condition().condition().comparator().GT()!=null) {
-            while (iterator.hasNext()) {
-                Row row = iterator.next();
-                if (row.getEntries().get(columnIndex).compareTo(value)>0) toDelete.add(row);
-            }
-        }else {
-            return "operator doesn't exist";
-        }
-        for (Row x:toDelete) {
-            table.delete(x);
-        }
-        return retString;
     }
 
     /**
@@ -445,88 +418,71 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
 
         ArrayList<String> table_list = manager.x_lockDict.get(session);
         table_list.add(tableName);
-        manager.x_lockDict.put(session,table_list);
-//        String tableName=ctx.table_name().getText().toLowerCase();
-//        Table table=manager.currentDatabase.get(tableName);
-//        if(table==null)return "database doesn't exist.";
-        String retString="update "+tableName;
+        manager.x_lockDict.put(session, table_list);
+        try {
+            String retString = "update " + tableName;
 
-        String expressionColumnName=ctx.column_name().getText().toLowerCase();
-        String expressionUpdateValue=ctx.expression().comparer().literal_value().getText();
-        String conditionColumnName = ctx.multiple_condition().condition().expression(0).comparer().column_full_name().column_name().getText().toLowerCase();
-        String conditionCompareValue = ctx.multiple_condition().condition().expression(1).comparer().literal_value().getText();
-        SQLParser.ComparatorContext comparator = ctx.multiple_condition().condition().comparator();
-        int primaryIndex=table.getPrimaryIndex();
+            String expressionColumnName = ctx.column_name().getText().toLowerCase();
+            String expressionUpdateValue = ctx.expression().comparer().literal_value().getText();
+            String conditionColumnName = ctx.multiple_condition().condition().expression(0).comparer().column_full_name().column_name().getText().toLowerCase();
+            String conditionCompareValue = ctx.multiple_condition().condition().expression(1).comparer().literal_value().getText();
+            SQLParser.ComparatorContext comparator = ctx.multiple_condition().condition().comparator();
+            int primaryIndex = table.getPrimaryIndex();
 
-        int expressionColumnIndex = table.searchColumn(expressionColumnName);
-        if (expressionColumnIndex < 0){
-            throw new KeyNotExistException();
+            int expressionColumnIndex = table.searchColumn(expressionColumnName);
+            if (expressionColumnIndex < 0) {
+                throw new KeyNotExistException();
+            }
+            int conditionColumnIndex = table.searchColumn(conditionColumnName);
+            if (conditionColumnIndex < 0) {
+                throw new KeyNotExistException();
+            }
+            Cell expressionValue = parseEntry(expressionUpdateValue, table.columns.get(expressionColumnIndex));
+            Cell conditionValue = parseEntry(conditionCompareValue, table.columns.get(conditionColumnIndex));
+            ArrayList<Row> toUpdate = new ArrayList<>();
+            Iterator<Row> iterator = table.iterator();
+            if (ctx.multiple_condition().condition().comparator().EQ() != null) {
+                while (iterator.hasNext()) {
+                    Row row = iterator.next();
+                    if (row.getEntries().get(conditionColumnIndex).compareTo(conditionValue) == 0) toUpdate.add(row);
+                }
+            } else if (ctx.multiple_condition().condition().comparator().NE() != null) {
+                while (iterator.hasNext()) {
+                    Row row = iterator.next();
+                    if (row.getEntries().get(conditionColumnIndex).compareTo(conditionValue) != 0) toUpdate.add(row);
+                }
+            } else if (ctx.multiple_condition().condition().comparator().LE() != null) {
+                while (iterator.hasNext()) {
+                    Row row = iterator.next();
+                    if (row.getEntries().get(conditionColumnIndex).compareTo(conditionValue) <= 0) toUpdate.add(row);
+                }
+            } else if (ctx.multiple_condition().condition().comparator().GE() != null) {
+                while (iterator.hasNext()) {
+                    Row row = iterator.next();
+                    if (row.getEntries().get(conditionColumnIndex).compareTo(conditionValue) >= 0) toUpdate.add(row);
+                }
+            } else if (ctx.multiple_condition().condition().comparator().LT() != null) {
+                while (iterator.hasNext()) {
+                    Row row = iterator.next();
+                    if (row.getEntries().get(conditionColumnIndex).compareTo(conditionValue) < 0) toUpdate.add(row);
+                }
+            } else if (ctx.multiple_condition().condition().comparator().GT() != null) {
+                while (iterator.hasNext()) {
+                    Row row = iterator.next();
+                    if (row.getEntries().get(conditionColumnIndex).compareTo(conditionValue) > 0) toUpdate.add(row);
+                }
+            } else {
+                return "operator doesn't exist";
+            }
+            for (Row x : toUpdate) {
+                table.update(x.getEntries().get(primaryIndex), x.newUpdateRow(expressionColumnIndex, expressionValue));
+            }
+            return retString;
         }
-        int conditionColumnIndex = table.searchColumn(conditionColumnName);
-        if (conditionColumnIndex < 0){
-            throw new KeyNotExistException();
+        catch (Exception e) {
+            table.releaseXLock(session);
+            return e.getMessage();
         }
-        Cell expressionValue=parseEntry(expressionUpdateValue, table.columns.get(expressionColumnIndex));
-        Cell conditionValue=parseEntry(conditionCompareValue, table.columns.get(conditionColumnIndex));
-//        int expressionColumnIndex=0,conditionColumnIndex=0,primaryIndex=table.getPrimaryIndex();
-//        Cell expressionValue = null,conditionValue=null;
-//        ColumnType expressionColumnType=null,conditionColumnType=null;
-//        for (int i=0;i<table.columns.size();i++) {
-//            Column x=table.columns.get(i);
-//            if(x.getColumnName().equals(expressionColumnName)){
-//                expressionColumnType=x.getColumnType();
-//                expressionColumnIndex=i;
-//            }
-//            if(x.getColumnName().equals(conditionColumnName)){
-//                conditionColumnType=x.getColumnType();
-//                conditionColumnIndex=i;
-//            }
-//        }
-//        if(expressionColumnType==null)return "column doesn't exist.";
-//        if(conditionColumnType==null)return "column doesn't exist.";
-//        expressionValue=createCell(expressionColumnType,expressionUpdateValue);
-//        conditionValue=createCell(conditionColumnType,conditionCompareValue);
-//        if(expressionValue==null)return "type doesn't exist.";
-//        if(conditionValue==null)return "type doesn't exist.";
-        ArrayList<Row>toUpdate=new ArrayList<>();
-        Iterator<Row> iterator=table.iterator();
-        if(ctx.multiple_condition().condition().comparator().EQ()!=null) {
-            while (iterator.hasNext()) {
-                Row row = iterator.next();
-                if (row.getEntries().get(conditionColumnIndex).compareTo(conditionValue)==0) toUpdate.add(row);
-            }
-        }else if(ctx.multiple_condition().condition().comparator().NE()!=null) {
-            while (iterator.hasNext()) {
-                Row row = iterator.next();
-                if (row.getEntries().get(conditionColumnIndex).compareTo(conditionValue)!=0) toUpdate.add(row);
-            }
-        }else if(ctx.multiple_condition().condition().comparator().LE()!=null) {
-            while (iterator.hasNext()) {
-                Row row = iterator.next();
-                if (row.getEntries().get(conditionColumnIndex).compareTo(conditionValue)<=0) toUpdate.add(row);
-            }
-        }else if(ctx.multiple_condition().condition().comparator().GE()!=null) {
-            while (iterator.hasNext()) {
-                Row row = iterator.next();
-                if (row.getEntries().get(conditionColumnIndex).compareTo(conditionValue)>=0) toUpdate.add(row);
-            }
-        }else if(ctx.multiple_condition().condition().comparator().LT()!=null) {
-            while (iterator.hasNext()) {
-                Row row = iterator.next();
-                if (row.getEntries().get(conditionColumnIndex).compareTo(conditionValue)<0) toUpdate.add(row);
-            }
-        }else if(ctx.multiple_condition().condition().comparator().GT()!=null) {
-            while (iterator.hasNext()) {
-                Row row = iterator.next();
-                if (row.getEntries().get(conditionColumnIndex).compareTo(conditionValue)>0) toUpdate.add(row);
-            }
-        }else {
-            return "operator doesn't exist";
-        }
-        for (Row x:toUpdate) {
-            table.update(x.getEntries().get(primaryIndex), x.newUpdateRow(expressionColumnIndex,expressionValue));
-        }
-        return retString;
     }
 
     /**

@@ -1,0 +1,10 @@
+0#begin transaction
+0#insert into person values('wz',2)
+0#commit
+1#begin transaction
+1#commit
+0#begin transaction
+0#insert into person values('spy',1)
+1#begin transaction
+0#commit
+1#commit
