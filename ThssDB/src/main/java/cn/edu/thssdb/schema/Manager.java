@@ -18,7 +18,7 @@ public class Manager {
   private HashMap<String, Database> databases;
   private static ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   public Database currentDatabase;
-  public ArrayList<Long> currentSessions;
+  public ArrayList<Long> currentSessions = new ArrayList<>();
   public ArrayList<Long> waitSessions;
   public static SQLHandler sqlHandler;
   public HashMap<Long, ArrayList<String>> x_lockDict;
