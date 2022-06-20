@@ -252,8 +252,24 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
             if (table == null){
                 throw new TableNotExistException();
             }
-            while(!table.testXLock(session));
-            table.takeXLock(session);
+            while(!table.testXLock(session)) {
+                ArrayList<String> table_list = manager.x_lockDict.get(session);
+                if(table_list.indexOf(tableName)!=-1){
+                    break;
+                }
+                try {
+                    Thread.currentThread().sleep(500);
+                }catch (InterruptedException ex){
+
+                }
+            }
+            try {
+                Thread.currentThread().sleep(500);
+            }catch (InterruptedException ex){
+
+            }
+            if(table.testXLock(session))
+                table.takeXLock(session);
             ArrayList<String> table_list = manager.x_lockDict.get(session);
             table_list.add(tableName);
             manager.x_lockDict.put(session,table_list);
@@ -307,8 +323,24 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
         if (table == null){
             throw new TableNotExistException();
         }
-        while(!table.testXLock(session));
-        table.takeXLock(session);
+        while(!table.testXLock(session)) {
+            ArrayList<String> table_list = manager.x_lockDict.get(session);
+            if(table_list.indexOf(tableName)!=-1){
+                break;
+            }
+            try {
+                Thread.currentThread().sleep(500);
+            }catch (InterruptedException ex){
+
+            }
+        }
+        try {
+            Thread.currentThread().sleep(500);
+        }catch (InterruptedException ex){
+
+        }
+        if(table.testXLock(session))
+            table.takeXLock(session);
         ArrayList<String> table_list = manager.x_lockDict.get(session);
         table_list.add(tableName);
         manager.x_lockDict.put(session,table_list);
@@ -391,8 +423,25 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
         if (table == null){
             throw new TableNotExistException();
         }
-        while(!table.testXLock(session));
-        table.takeXLock(session);
+        while(!table.testXLock(session)) {
+            ArrayList<String> table_list = manager.x_lockDict.get(session);
+            if(table_list.indexOf(tableName)!=-1){
+                break;
+            }
+
+            try {
+                Thread.currentThread().sleep(500);
+            }catch (InterruptedException ex){
+
+            }
+        }
+        try {
+            Thread.currentThread().sleep(500);
+        }catch (InterruptedException ex){
+
+        }
+        if(table.testXLock(session))
+            table.takeXLock(session);
 
         ArrayList<String> table_list = manager.x_lockDict.get(session);
         table_list.add(tableName);
@@ -493,7 +542,18 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
         String table2Name=null;
         if(ctx.table_query(0).K_ON()==null){
             Table table1=manager.currentDatabase.get(table1Name);
-            while(!table1.testSLock(session));
+            while(!table1.testSLock(session)) {
+                try {
+                    Thread.currentThread().sleep(500);
+                }catch (InterruptedException ex){
+
+                }
+            }
+            try {
+                Thread.currentThread().sleep(500);
+            }catch (InterruptedException ex){
+
+            }
             table1.takeSLock(session);
             if(ctx.K_WHERE()!=null){
                 List<String>columns=new ArrayList<>();
@@ -605,7 +665,19 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
             table2Name=ctx.table_query(0).table_name(1).getText();
             Table table1=manager.currentDatabase.get(table1Name);
             Table table2=manager.currentDatabase.get(table2Name);
-            while(!table1.testSLock(session)||!table2.testSLock(session));
+            while(!table1.testSLock(session)||!table2.testSLock(session)){
+
+                try {
+                    Thread.currentThread().sleep(500);
+                }catch (InterruptedException ex){
+
+                }
+            }
+            try {
+                Thread.currentThread().sleep(500);
+            }catch (InterruptedException ex){
+
+            }
             table1.takeSLock(session);
             table2.takeSLock(session);
 
@@ -620,7 +692,7 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                 String conditionColumnName = ctx.multiple_condition().condition().expression(0).comparer().column_full_name().column_name().getText().toLowerCase();
                 String conditionCompareValue = ctx.multiple_condition().condition().expression(1).comparer().literal_value().getText();
                 SQLParser.ComparatorContext comparator = ctx.multiple_condition().condition().comparator();
-                if(conditionTableName==table1Name){
+                if(conditionTableName.equals(table1Name)){
                     int conditionIndex=table1.searchColumn(conditionColumnName);
                     Cell conditionValue=parseEntry(conditionCompareValue, table1.columns.get(conditionIndex));
 //                    ColumnType conditionType=table1.columns.get(conditionIndex).getColumnType();
