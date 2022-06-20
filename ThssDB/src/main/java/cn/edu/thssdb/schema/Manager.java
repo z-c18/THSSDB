@@ -145,11 +145,11 @@ public class Manager {
 
 
   // Log control and recover from logs.
-  public void writeLog(String statement) {
+  public void writeLog(long session, String statement) {
     String logFilename = this.currentDatabase.getDatabaseLogFilePath();
     try {
       FileWriter writer = new FileWriter(logFilename, true);
-      writer.write(statement + "\n");
+      writer.write(session + "#" + statement + "\n");
       writer.close();
     } catch (Exception e) {
       throw new FileIOException(logFilename);
@@ -157,7 +157,26 @@ public class Manager {
   }
 
   // TODO: read Log in transaction to recover.
-  public void readLog(String databaseName) { }
+  public void readLog(String databaseName) {
+    File tableDataFile = new File(Manager.getTableDataFilePath(databaseName));
+    if (!tableDataFile.isFile()) return;
+    try {
+      InputStreamReader reader = new InputStreamReader(new FileInputStream(tableDataFile));
+      BufferedReader bufferedReader = new BufferedReader(reader);
+      String line;
+      while ((line = bufferedReader.readLine()) != null) {
+        System.out.println("??!!" + line);
+        long session = Long.parseLong(line.split("#")[0]);
+        session = - session - 1;
+        String statement = line.split("#")[1];
+        sqlHandler.evaluate(statement, session);
+      }
+      bufferedReader.close();
+      reader.close();
+    } catch (Exception e) {
+      throw new FileIOException(databaseName);
+    }
+  }
 
   public void recover() {
     File managerDataFile = new File(Manager.getManagerDataFilePath());
@@ -182,5 +201,9 @@ public class Manager {
   // Get positions
   public static String getManagerDataFilePath(){
     return Global.DBMS_DIR + File.separator + "data" + File.separator + "manager";
+  }
+
+  public static String getTableDataFilePath(String databaseName){
+    return Global.DBMS_DIR + File.separator + "data" + File.separator + databaseName + File.separator + "log";
   }
 }
