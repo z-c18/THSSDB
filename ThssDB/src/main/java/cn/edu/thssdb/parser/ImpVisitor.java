@@ -485,8 +485,9 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                 String conditionCompareValue = ctx.multiple_condition().condition().expression(1).comparer().literal_value().getText();
                 SQLParser.ComparatorContext comparator = ctx.multiple_condition().condition().comparator();
                 int conditionIndex=table1.searchColumn(conditionColumnName);
-                ColumnType conditionType=table1.columns.get(conditionIndex).getColumnType();
-                Cell conditionValue=createCell(conditionType,conditionCompareValue);
+                Cell conditionValue=parseEntry(conditionCompareValue, table1.columns.get(conditionIndex));
+//                ColumnType conditionType=table1.columns.get(conditionIndex).getColumnType();
+//                Cell conditionValue=createCell(conditionType,conditionCompareValue);
                 Iterator<Row> iterator=table1.iterator();
                 if(ctx.multiple_condition().condition().comparator().EQ()!=null) {
                     while (iterator.hasNext()) {
@@ -594,8 +595,9 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
                 SQLParser.ComparatorContext comparator = ctx.multiple_condition().condition().comparator();
                 if(conditionTableName==table1Name){
                     int conditionIndex=table1.searchColumn(conditionColumnName);
-                    ColumnType conditionType=table1.columns.get(conditionIndex).getColumnType();
-                    Cell conditionValue=createCell(conditionType,conditionCompareValue);
+                    Cell conditionValue=parseEntry(conditionCompareValue, table1.columns.get(conditionIndex));
+//                    ColumnType conditionType=table1.columns.get(conditionIndex).getColumnType();
+//                    Cell conditionValue=createCell(conditionType,conditionCompareValue);
                     Iterator<Row> iterator=table1.iterator();
                     if(ctx.multiple_condition().condition().comparator().EQ()!=null) {
                         while (iterator.hasNext()) {
@@ -635,8 +637,9 @@ public class ImpVisitor extends SQLBaseVisitor<Object> {
 
                 }else {
                     int conditionIndex=table2.searchColumn(conditionColumnName);
-                    ColumnType conditionType=table2.columns.get(conditionIndex).getColumnType();
-                    Cell conditionValue=createCell(conditionType,conditionCompareValue);
+                    Cell conditionValue=parseEntry(conditionCompareValue, table2.columns.get(conditionIndex));
+//                    ColumnType conditionType=table2.columns.get(conditionIndex).getColumnType();
+//                    Cell conditionValue=createCell(conditionType,conditionCompareValue);
                     Iterator<Row> iterator=table2.iterator();
                     if(ctx.multiple_condition().condition().comparator().EQ()!=null) {
                         while (iterator.hasNext()) {
